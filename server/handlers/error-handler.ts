@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { Response } from 'express';
 import { OperationEnum } from "../models/enums/operation.enum";
 
 /**
@@ -11,10 +12,11 @@ import { OperationEnum } from "../models/enums/operation.enum";
 export const handleError = (
    errorMessage: string,
    statusCode: number,
-   operation: OperationEnum
+   operation: OperationEnum,
+   res: Response
 ) => {
-   console.error("");
-   console.error(errorMessage);
+   console.error("The server encountered an error while processing your request:");
+   console.error(`${operation}: ${errorMessage}`);
 
    return res.status(statusCode).json({
       status: statusCode,
