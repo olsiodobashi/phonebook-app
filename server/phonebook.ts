@@ -1,4 +1,4 @@
-// @ts-nocheck
+//@ts-nocheck
 import { Customer } from "./models/customer.interface";
 import { PhoneNumber } from "./models/phone-number.interface";
 import { Firestore } from "./database";
@@ -22,10 +22,24 @@ export class PhoneBook {
       });
    }
 
-   private isDuplicatePhoneNumber(phoneNumber: string): boolean {
-      const customerIds = this.phoneCustomer.get(phoneNumber);
-      return customerIds ? customerIds.length > 1 : false;
-    }
+   /**
+    * Checks whether a phone number exists in a customer
+    * @param customer The customer to check against
+    * @param newPhoneNumber The new phone number to be added
+    * @returns 
+    */
+   private canAddPhoneNumber(
+      customer: Customer,
+      newPhoneNumber: PhoneNumber
+   ): boolean {
+      if (
+         customer.phoneNumbers.some((phone) => phone.number === newPhoneNumber.number)
+      ) {
+         return false;
+      }
+
+      return true;
+   }
 
    /**
     * Stores customer record
@@ -40,30 +54,33 @@ export class PhoneBook {
     * @param phoneNumber Phone number data to be stored
     */
    public addPhoneNumber(phoneNumber: PhoneNumber) {
-      if (!this.isDuplicatePhoneNumber(phoneNumber.number)) {
-         this.phoneNumbers.set(phoneNumber.number, phoneNumber);
-      }
-
-      return this.phoneNumbers;
+      return this.phoneNumbers.set(phoneNumber.number, phoneNumber);
    }
 
    /**
     * Link a customer to a phone number
-    * @param customerId The ID of the customer
+    * @param customer The customer object
     * @param phoneNumber The phone numbe record to be added to the customer
     */
-   public associate(customerId: string, phoneNumber: string) {
-      if (!this.customerPhone.has(customerId)) {
-         this.customerPhone.set(customerId, []);
-      }
-      this.customerPhone.get(customerId)!.push(phoneNumber);
+   public associatePhoneNumberToCustomer(
+      customer: Customer,
+      newPhoneNumber: PhoneNumber
+   ): boolean {
+      if (this.canAddPhoneNumber(customer, newPhoneNumber)) {
+         customer.phoneNumbers.push(newPhoneNumber);
+         this.customers.set(customer.id, customer);
 
-      if (!this.phoneCustomer.has(phoneNumber)) {
-         this.phoneCustomer.set(phoneNumber, []);
+         return true;
       }
-      this.phoneCustomer.get(phoneNumber)!.push(customerId);
+
+      return false;
    }
 
+   /**
+    * Search customers by first or name
+    * @param name The string that will be matched against the customer's fname or lname.
+    * @returns A list of customers that match the name criteria
+    */
    public searchByCustomerName(name: string): Customer[] {
       const result: Customer[] = [];
 
@@ -79,14 +96,22 @@ export class PhoneBook {
       return result;
    }
 
+   /**
+    * Search customers by phone number.
+    * @param phoneNumber The number to search for. Can be a partial number.
+    * @returns List of customers that match the phone number criteria
+    */
    public searchByPhoneNumber(phoneNumber: string): Customer[] {
       const matchingCustomers: Customer[] = [];
 
       for (let customer of this.customers.values()) {
-        const matches = customer.phoneNumbers.some(record => record.number === phoneNumber);
-        if (matches) {
-          matchingCustomers.push(customer);
-        }
+         const matches = customer.phoneNumbers.some((record) =>
+            record.number.includes(phoneNumber)
+         );
+
+         if (matches) {
+            matchingCustomers.push(customer);
+         }
       }
 
       return matchingCustomers;
